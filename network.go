@@ -10,7 +10,7 @@ This file defines the network framework for the processes.
 
 type environment struct {
 	cfg *Config
-	receiveQueues map[int32]chan messageData
+	receiveQueues map[int]chan messageData
 }
 
 type network interface {
@@ -21,16 +21,16 @@ type network interface {
 }
 
 type paxosNode struct {
-	id int32
+	id int
 	env *environment
 }
 
 
 // Paxos network must be composed of
 
-func newPaxosEnvironment(nodes ...int32) *environment {
+func newPaxosEnvironment(nodes ...int) *environment {
 	env := environment{
-		receiveQueues: make(map[int32]chan messageData, 0),
+		receiveQueues: make(map[int]chan messageData, 0),
 	}
 	for _, node := range nodes {
 		env.receiveQueues[node] = make(chan messageData, 1024)
@@ -38,7 +38,7 @@ func newPaxosEnvironment(nodes ...int32) *environment {
 	return &env
 }
 
-func (env *environment) getNodeNetwork(id int32) paxosNode {
+func (env *environment) getNodeNetwork(id int) paxosNode {
 	return paxosNode{
 		id: id,
 		env: env,
@@ -57,7 +57,7 @@ func (env *environment) sendMessage(m messageData) {
 }
 
 // Client represented by given id receives the message
-func (env *environment) receiveMessage(id int32) *messageData{
+func (env *environment) receiveMessage(id int) *messageData{
 	select {
 	case msg := <-env.receiveQueues[id]:
 		logrus.WithFields(logrus.Fields{
