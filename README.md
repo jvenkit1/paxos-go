@@ -13,12 +13,17 @@ In the Paxos algorithm, we assume a network of processes. Each process plays the
 * Acceptor
 * Learner
 
-We also select a leader which acts as a distinguished proposer/learner.
+Each process communicates in the form of request-response messages and no two proposals are ever issues the same number.
 
-Each process communicates in the form of request-response messages. 
+There are 4 types of messages used to communicate :
+1. Prepare Message: Signifies a node suggesting a particular value. This message is broadcasted to all nodes.
+2. Promise Message: Signifies an agreement between 2 nodes, wherein node B accepts node A's message suggesting a particular value. Signifies intent to recommend this value during the election.
+3. Propose Message: Once a node attains majority promises for its proposed value, it sends a Propose message to all the majority nodes, formally proposing the value.
+4. Accept Message: 
 
-No two proposals are ever issues the same number.
+A paxos cycle begins with each node issuing a request. This forms the basis values for which consensus has to occur. We call this message a 'Prepare Message'. Since we follow a request response model, an acknowledgement to the Prepare message is called as a Promise message.
 
+Once an issued prepared message value attains majority promises, we send a proposal message. Upon verification of this proposal message, we finally accept/learn a particular value.
 
 
 # Implementation Notes:
