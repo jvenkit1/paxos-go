@@ -2,6 +2,7 @@ package paxos
 
 import (
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 /*
@@ -25,9 +26,6 @@ type paxosNode struct {
 	env *environment
 }
 
-
-// Paxos network must be composed of
-
 func newPaxosEnvironment(nodes ...int) *environment {
 	env := environment{
 		receiveQueues: make(map[int]chan messageData, 0),
@@ -47,12 +45,7 @@ func (env *environment) getNodeNetwork(id int) paxosNode {
 
 // sends a message to the target node. Basically gets added to the correct channel
 func (env *environment) sendMessage(m messageData) {
-	logrus.WithFields(logrus.Fields{
-		"Source": m.messageSender,
-		"Destination": m.messageRecipient,
-		"Value": m.value,
-		"Type": m.messageCategory,
-	}).Info("Sending message")
+	m.printMessage("Sending message")
 	env.receiveQueues[m.messageRecipient] <- m
 }
 
@@ -60,19 +53,16 @@ func (env *environment) sendMessage(m messageData) {
 func (env *environment) receiveMessage(id int) *messageData{
 	select {
 	case msg := <-env.receiveQueues[id]:
-		logrus.WithFields(logrus.Fields{
-			"Source": msg.messageSender,
-			"Destination": msg.messageRecipient,
-			"Value": msg.value,
-			"Type": msg.messageCategory,
-		}).Info("Received message")
+		msg.printMessage("Received message")
 		return &msg
-	//case <-time.After(time.Second):
-	//	return nil
+	case <-time.After(time.Second):
+		logrus.Info("Timing out")
+		return nil
 	}
 }
 
 func (node *paxosNode) send(m messageData){
+	m.printMessage("Printing inside send()")
 	node.env.sendMessage(m)
 }
 

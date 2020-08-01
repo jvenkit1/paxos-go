@@ -1,5 +1,7 @@
 package paxos
 
+import "github.com/sirupsen/logrus"
+
 type messageType int
 
 const (
@@ -24,4 +26,13 @@ func (m *messageData) getProposalValue() string {
 
 func (m *messageData) getMessageNumber() int {
 	return m.messageNumber
+}
+
+func (m *messageData) printMessage(str string) {
+	logrus.WithFields(logrus.Fields{
+		"Source": m.messageSender,
+		"Destination": m.messageRecipient,
+		"Value": m.value,
+		"Type": m.messageCategory,
+	}).Info(str)
 }

@@ -1,7 +1,7 @@
 package paxos
 
 import (
-
+	"github.com/sirupsen/logrus"
 )
 
 type learner struct {
@@ -56,12 +56,14 @@ func (l *learner) run() string{
 	for{
 		msg := l.node.receive()
 		if msg==nil {
+			logrus.Info("Still learning")
 			continue
 		}
-
+		logrus.Info("Inside learner")
 		l.validateAcceptMessage(*msg)
 		learnedMessage, learned := l.chosen()
 		if !learned {
+			logrus.Info("NOt leanerd")
 			continue
 		}
 		return learnedMessage.value

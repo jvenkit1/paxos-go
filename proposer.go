@@ -54,7 +54,7 @@ func (p *proposer) getPromiseCount() int {
 
 // consistency quorum
 func (p *proposer) reachedMajority() bool {
-	return p.getPromiseCount() >= p.majority()
+	return p.getPromiseCount() > p.majority()
 }
 
 // send prepare message to the majority of acceptors
@@ -128,10 +128,7 @@ func (p *proposer) run () {
 		if msg==nil {
 			continue
 		}
-		logrus.WithFields(logrus.Fields{
-			"Sender": msg.messageSender,
-			"Value": msg.value,
-		}).Info("Received message")
+		msg.printMessage("Proposer received message")
 		switch msg.messageCategory {
 		case AckMessage:
 			p.receivePromise(*msg)
