@@ -14,13 +14,6 @@ type environment struct {
 	receiveQueues map[int]chan messageData
 }
 
-type network interface {
-	sendMessage()
-	recvMessage()
-	addProcess()
-	removeProcess()
-}
-
 type paxosNode struct {
 	id int
 	env *environment
@@ -45,7 +38,7 @@ func (env *environment) getNodeNetwork(id int) paxosNode {
 
 // sends a message to the target node. Basically gets added to the correct channel
 func (env *environment) sendMessage(m messageData) {
-	m.printMessage("Sending message")
+	m.timestamp = time.Now().String()
 	env.receiveQueues[m.messageRecipient] <- m
 }
 
@@ -53,7 +46,6 @@ func (env *environment) sendMessage(m messageData) {
 func (env *environment) receiveMessage(id int) *messageData{
 	select {
 	case msg := <-env.receiveQueues[id]:
-		msg.printMessage("Received message")
 		return &msg
 	case <-time.After(time.Second):
 		logrus.Info("Timing out")
@@ -62,7 +54,7 @@ func (env *environment) receiveMessage(id int) *messageData{
 }
 
 func (node *paxosNode) send(m messageData){
-	m.printMessage("Printing inside send()")
+	//m.printMessage("Printing inside send()")
 	node.env.sendMessage(m)
 }
 

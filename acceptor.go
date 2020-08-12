@@ -8,7 +8,6 @@ import (
 
 // Acceptor
 type acceptor struct {
-	ballotNum int
 	id int
 	learners []int
 
@@ -17,9 +16,8 @@ type acceptor struct {
 	node paxosNode
 }
 
-func newAcceptor(ballotNum int, id int, node paxosNode, learners ...int) *acceptor {
+func newAcceptor(id int, node paxosNode, learners ...int) *acceptor {
 	return &acceptor{
-		ballotNum: ballotNum,
 		id: id,
 		node: node,
 		learners: learners,
@@ -61,11 +59,6 @@ func (a *acceptor) receivePreparedMessage(msg messageData) *messageData {
 		messageCategory: AckMessage,  // Promise
 	}
 	ack.printMessage("Inside receivePreparedMessage")
-	//ack.messageSender = a.id
-	//ack.messageRecipient = msg.messageSender
-	//ack.messageNumber = msg.messageNumber
-	//ack.value = msg.value
-	//ack.messageCategory = AckMessage  // Promise
 	a.acceptedMessage = ack
 
 	return &ack
@@ -86,11 +79,9 @@ func (a *acceptor) run() {
 		switch message.messageCategory {
 		case PrepareMessage:
 			ack := a.receivePreparedMessage(*message)
-			//if &(messageData{}) != ack {
-				ack.printMessage("Sending ACK message")
-				a.node.send(*ack)
-				continue
-			//}
+			ack.printMessage("Sending ACK message")
+			a.node.send(*ack)
+			continue
 		case ProposeMessage:
 			acceptedMessage := a.receiveProposeMessage(*message)
 			if acceptedMessage == true {

@@ -11,13 +11,22 @@ const (
 	AckMessage  // promise response - acceptor - proposer
 )
 
+var messages [4]string
+
 type messageData struct {
 	messageSender int  // sender of the message
 	messageRecipient int  // recipient of the message
 	messageNumber int  // current Sequence number of the message
 	messageCategory messageType
 	value string  // value contained in the string
+	timestamp string
+}
 
+func init() {
+	messages[0] = "PrepareMessage"
+	messages[1] = "ProposeMessage"
+	messages[2] = "AcceptMessage"
+	messages[3] = "AckMessage"
 }
 
 func (m *messageData) getProposalValue() string {
@@ -33,6 +42,7 @@ func (m *messageData) printMessage(str string) {
 		"Source": m.messageSender,
 		"Destination": m.messageRecipient,
 		"Value": m.value,
-		"Type": m.messageCategory,
+		"Sequence Number": m.messageNumber,
+		"Category": messages[m.messageCategory-1],
 	}).Info(str)
 }

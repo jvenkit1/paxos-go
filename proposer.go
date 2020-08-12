@@ -72,7 +72,7 @@ func (p *proposer) prepare() []messageData {
 		}
 		messageList = append(messageList, message)
 		sentCount+=1
-		if sentCount >= p.majority() {
+		if sentCount > p.majority() {
 			break
 		}
 	}
@@ -95,7 +95,7 @@ func (p *proposer) propose() []messageData {
 			messageList = append(messageList, message)
 			sentCount += 1
 		}
-		if sentCount >= p.majority() {
+		if sentCount > p.majority() {
 			break
 		}
 	}
@@ -108,35 +108,30 @@ func (p *proposer) receivePromise(promiseMessage messageData) {
 		p.acceptors[promiseMessage.messageSender] = promiseMessage
 		if promiseMessage.getMessageNumber() > p.getProposerNumber() {
 			p.proposalNumber = promiseMessage.getMessageNumber()
-			p.proposalValue = promise.getProposalValue()
+			p.proposalValue = promiseMessage.getProposalValue()
 		}
 	}
 }
 
-func (p *proposer) run () {
-	logrus.Info("Starting Proposer")
-
+func (p *proposer) run() {
 	for !p.reachedMajority() {
 		messageList := p.prepare()
-		logrus.Infof("Proposer %d is preparing to send %d messages", p.id, len(messageList))
 		for _, message := range messageList {
 			p.node.send(message)
 		}
 
-		// receiving messages
 		msg := p.node.receive()
 		if msg==nil {
 			continue
 		}
 		msg.printMessage("Proposer received message")
-		switch msg.messageCategory {
-		case AckMessage:
+		if msg.messageCategory == AckMessage {
+			logrus.Infof("Ack message received from %d", msg.messageSender)
 			p.receivePromise(*msg)
-		default:
+		}else {
 			logrus.Fatal("Unsupported Message format")
 		}
 	}
-
 	// Majority has been reached
 	// Proposer now sends message to the acceptor
 	proposerMessageList := p.propose()
