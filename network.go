@@ -1,7 +1,6 @@
 package paxos
 
 import (
-	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -48,7 +47,6 @@ func (env *environment) receiveMessage(id int) *messageData{
 	case msg := <-env.receiveQueues[id]:
 		return &msg
 	case <-time.After(time.Second):
-		logrus.Info("Timing out")
 		return nil
 	}
 }

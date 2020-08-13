@@ -70,10 +70,7 @@ func (a *acceptor) run() {
 		message := a.node.receive()
 		if message == nil {
 			// null message obtained
-			logrus.Infof("Null obtained")
-			return
-		} else {
-			logrus.Info("Not Null")
+			continue
 		}
 		message.printMessage(fmt.Sprintf("Acceptor %d received message", a.id))
 		switch message.messageCategory {

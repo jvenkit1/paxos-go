@@ -56,14 +56,12 @@ func (l *learner) run() string{
 	for{
 		msg := l.node.receive()
 		if msg==nil {
-			logrus.Info("Still learning")
 			continue
 		}
-		logrus.Info("Inside learner")
 		l.validateAcceptMessage(*msg)
 		learnedMessage, learned := l.chosen()
 		if !learned {
-			logrus.Info("NOt leanerd")
+			logrus.Info("Learner hasn't learned anything yet.")
 			continue
 		}
 		return learnedMessage.value
