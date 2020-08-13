@@ -33,3 +33,4 @@ Once an issued prepared message value attains majority promises, we send a propo
 
 # TODO:
 * Introduce chaos into the setup. Randomly delete one process and evaluate the effect.  -- This is a test for Byzantine Failure
+* 2 proposer model has a weird deadlock condition. Test further.
