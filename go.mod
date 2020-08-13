@@ -1,4 +1,4 @@
-module paxos_go
+module github.com/jvenkit1/paxos_go
 
 go 1.14
 
