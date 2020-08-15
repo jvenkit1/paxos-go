@@ -28,7 +28,7 @@ func NewPaxosEnvironment(nodes ...int) *environment {
 	return &env
 }
 
-func (env *environment) getNodeNetwork(id int) paxosNode {
+func (env *environment) GetNodeNetwork(id int) paxosNode {
 	return paxosNode{
 		id: id,
 		env: env,

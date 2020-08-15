@@ -14,13 +14,13 @@ func TestWithOneProposer(t *testing.T){
 	var acceptorList []Acceptor
 	acceptorID := 1
 	for acceptorID < 4 {
-		node := network.getNodeNetwork(acceptorID)
+		node := network.GetNodeNetwork(acceptorID)
 		acceptorList = append(acceptorList, *NewAcceptor(acceptorID, node, 200))
 		acceptorID+=1
 	}
 
 	// Create Proposer
-	proposer := NewProposer(100, inputString, network.getNodeNetwork(100), 1, 2, 3)
+	proposer := NewProposer(100, inputString, network.GetNodeNetwork(100), 1, 2, 3)
 	go proposer.run()
 
 	for index :=range acceptorList {
@@ -28,7 +28,7 @@ func TestWithOneProposer(t *testing.T){
 	}
 
 	// Create learner.
-	learner := NewLearner(200, network.getNodeNetwork(200), 1, 2, 3)
+	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
 	learnedValue := learner.run()
 
 	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
@@ -47,13 +47,13 @@ func TestWithMultipleProposers(t *testing.T){
 	var acceptorList []Acceptor
 	acceptorID := 1
 	for acceptorID < 4 {
-		node := network.getNodeNetwork(acceptorID)
+		node := network.GetNodeNetwork(acceptorID)
 		acceptorList = append(acceptorList, *NewAcceptor(acceptorID, node, 200))
 		acceptorID+=1
 	}
 
 	// Create Proposer 1
-	proposer1 := NewProposer(100, inputString1, network.getNodeNetwork(100), 1, 2, 3)
+	proposer1 := NewProposer(100, inputString1, network.GetNodeNetwork(100), 1, 2, 3)
 	go proposer1.run()
 
 	for index :=range acceptorList {
@@ -61,7 +61,7 @@ func TestWithMultipleProposers(t *testing.T){
 	}
 
 	// Create Proposer2
-	proposer2 := NewProposer(101, inputString2, network.getNodeNetwork(101), 1, 2, 3)
+	proposer2 := NewProposer(101, inputString2, network.GetNodeNetwork(101), 1, 2, 3)
 	time.AfterFunc(time.Second, func() {
 		proposer2.run()
 	})
@@ -71,7 +71,7 @@ func TestWithMultipleProposers(t *testing.T){
 	}
 
 	// Create learner.
-	learner := NewLearner(200, network.getNodeNetwork(200), 1, 2, 3)
+	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
 	learnedValue := learner.run()
 
 	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
