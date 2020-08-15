@@ -11,7 +11,7 @@ func TestWithOneProposer(t *testing.T){
 	inputString := "Hello World"
 
 	// Create acceptors
-	var acceptorList []acceptor
+	var acceptorList []Acceptor
 	acceptorID := 1
 	for acceptorID < 4 {
 		node := network.getNodeNetwork(acceptorID)
@@ -44,7 +44,7 @@ func TestWithMultipleProposers(t *testing.T){
 	inputString2 := "Paxos"
 
 	// Create acceptors
-	var acceptorList []acceptor
+	var acceptorList []Acceptor
 	acceptorID := 1
 	for acceptorID < 4 {
 		node := network.getNodeNetwork(acceptorID)

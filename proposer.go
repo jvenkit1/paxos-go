@@ -4,7 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type proposer struct {
+type Proposer struct {
 	id int
 	seq int
 	proposalNumber int
@@ -13,8 +13,8 @@ type proposer struct {
 	node paxosNode
 }
 
-func NewProposer(id int, value string, node paxosNode, acceptors ...int) *proposer{
-	newProposer := proposer{
+func NewProposer(id int, value string, node paxosNode, acceptors ...int) *Proposer{
+	newProposer := Proposer{
 		id: id,
 		seq: 0,
 		proposalValue: value,
@@ -27,16 +27,16 @@ func NewProposer(id int, value string, node paxosNode, acceptors ...int) *propos
 	return &newProposer
 }
 
-func (p *proposer) majority() int {
+func (p *Proposer) majority() int {
 	return len(p.acceptors)/2 + 1
 }
 
-func (p *proposer) getProposerNumber() int {
+func (p *Proposer) getProposerNumber() int {
 	p.proposalNumber  = p.seq << 4 | p.id
 	return p.proposalNumber
 }
 
-func (p *proposer) getPromiseCount() int {
+func (p *Proposer) getPromiseCount() int {
 	promiseCount := 0
 	for _, message := range p.acceptors {
 		logrus.WithFields(logrus.Fields{
@@ -53,12 +53,12 @@ func (p *proposer) getPromiseCount() int {
 }
 
 // consistency quorum
-func (p *proposer) reachedMajority() bool {
+func (p *Proposer) reachedMajority() bool {
 	return p.getPromiseCount() > p.majority()
 }
 
 // send prepare message to the majority of acceptors
-func (p *proposer) prepare() []messageData {
+func (p *Proposer) prepare() []messageData {
 	p.seq+=1
 	sentCount := 0
 	var messageList []messageData
@@ -80,7 +80,7 @@ func (p *proposer) prepare() []messageData {
 }
 
 // send propose message to the majority of acceptors
-func (p *proposer) propose() []messageData {
+func (p *Proposer) propose() []messageData {
 	sentCount := 0
 	var messageList []messageData
 	for acceptorID, acceptorMessage := range p.acceptors {
@@ -102,7 +102,7 @@ func (p *proposer) propose() []messageData {
 	return messageList
 }
 
-func (p *proposer) receivePromise(promiseMessage messageData) {
+func (p *Proposer) receivePromise(promiseMessage messageData) {
 	promise := p.acceptors[promiseMessage.messageSender]
 	if promise.getMessageNumber() < promiseMessage.getMessageNumber() {
 		p.acceptors[promiseMessage.messageSender] = promiseMessage
@@ -113,7 +113,7 @@ func (p *proposer) receivePromise(promiseMessage messageData) {
 	}
 }
 
-func (p *proposer) run() {
+func (p *Proposer) run() {
 	for !p.reachedMajority() {
 		messageList := p.prepare()
 		for _, message := range messageList {

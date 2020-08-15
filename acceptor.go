@@ -7,7 +7,7 @@ import (
 
 
 // Acceptor
-type acceptor struct {
+type Acceptor struct {
 	id int
 	learners []int
 
@@ -16,8 +16,8 @@ type acceptor struct {
 	node paxosNode
 }
 
-func NewAcceptor(id int, node paxosNode, learners ...int) *acceptor {
-	return &acceptor{
+func NewAcceptor(id int, node paxosNode, learners ...int) *Acceptor {
+	return &Acceptor{
 		id: id,
 		node: node,
 		learners: learners,
@@ -26,7 +26,7 @@ func NewAcceptor(id int, node paxosNode, learners ...int) *acceptor {
 }
 
 // Receive a proposal message and return if accepted or not
-func (a *acceptor) receiveProposeMessage(msg messageData) bool {
+func (a *Acceptor) receiveProposeMessage(msg messageData) bool {
 	if a.acceptedMessage.getMessageNumber() < msg.getMessageNumber() || a.acceptedMessage.getMessageNumber() > msg.getMessageNumber() {
 		logrus.WithFields(logrus.Fields{
 			"Acceptor ID": a.id,
@@ -42,7 +42,7 @@ func (a *acceptor) receiveProposeMessage(msg messageData) bool {
 }
 
 // Receive message of category Prepared and return an Ack Message
-func (a *acceptor) receivePreparedMessage(msg messageData) *messageData {
+func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 	if a.promisedMessage.getMessageNumber() >= msg.getMessageNumber() {
 		logrus.WithFields(logrus.Fields{
 			"Acceptor ID": a.id,
@@ -64,7 +64,7 @@ func (a *acceptor) receivePreparedMessage(msg messageData) *messageData {
 	return &ack
 }
 
-func (a *acceptor) run() {
+func (a *Acceptor) run() {
 	for{
 		logrus.Infof("Acceptor %d waiting for message", a.id)
 		message := a.node.receive()

@@ -4,14 +4,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type learner struct {
+type Learner struct {
 	id int
 	acceptedMessages map[int]messageData
 	node paxosNode
 }
 
-func NewLearner(id int, node paxosNode, acceptorIDList ...int) *learner {
-	newLearner := learner{
+func NewLearner(id int, node paxosNode, acceptorIDList ...int) *Learner {
+	newLearner := Learner{
 		id: id,
 		node: node,
 	}
@@ -22,18 +22,18 @@ func NewLearner(id int, node paxosNode, acceptorIDList ...int) *learner {
 	return &newLearner
 }
 
-func (l *learner) majority() int{
+func (l *Learner) majority() int{
 	return len(l.acceptedMessages)/2 + 1
 }
 
-func (l *learner) validateAcceptMessage(acceptedMessage messageData) {
+func (l *Learner) validateAcceptMessage(acceptedMessage messageData) {
 	currentAcceptedMessage := l.acceptedMessages[acceptedMessage.messageSender]  // checking if the latest accepted message from the sender is the current message
 	if currentAcceptedMessage.getMessageNumber() < acceptedMessage.getMessageNumber() {
 		l.acceptedMessages[acceptedMessage.messageSender] = acceptedMessage
 	}
 }
 
-func (l *learner) chosen() (messageData, bool) {
+func (l *Learner) chosen() (messageData, bool) {
 	acceptedMessageCount := make(map[int]int)
 	acceptedMessageMap := make(map[int]messageData)
 
@@ -52,7 +52,7 @@ func (l *learner) chosen() (messageData, bool) {
 	return messageData{}, false
 }
 
-func (l *learner) run() string{
+func (l *Learner) run() string{
 	for{
 		msg := l.node.receive()
 		if msg==nil {
