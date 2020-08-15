@@ -18,7 +18,7 @@ type paxosNode struct {
 	env *environment
 }
 
-func newPaxosEnvironment(nodes ...int) *environment {
+func NewPaxosEnvironment(nodes ...int) *environment {
 	env := environment{
 		receiveQueues: make(map[int]chan messageData, 0),
 	}

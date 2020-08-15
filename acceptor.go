@@ -16,7 +16,7 @@ type acceptor struct {
 	node paxosNode
 }
 
-func newAcceptor(id int, node paxosNode, learners ...int) *acceptor {
+func NewAcceptor(id int, node paxosNode, learners ...int) *acceptor {
 	return &acceptor{
 		id: id,
 		node: node,

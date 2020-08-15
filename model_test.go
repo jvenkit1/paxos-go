@@ -7,7 +7,7 @@ import (
 )
 
 func TestWithOneProposer(t *testing.T){
-	network := newPaxosEnvironment(1, 2, 3, 100, 200)
+	network := NewPaxosEnvironment(1, 2, 3, 100, 200)
 	inputString := "Hello World"
 
 	// Create acceptors
@@ -15,7 +15,7 @@ func TestWithOneProposer(t *testing.T){
 	acceptorID := 1
 	for acceptorID < 4 {
 		node := network.getNodeNetwork(acceptorID)
-		acceptorList = append(acceptorList, *newAcceptor(acceptorID, node, 200))
+		acceptorList = append(acceptorList, *NewAcceptor(acceptorID, node, 200))
 		acceptorID+=1
 	}
 
@@ -39,7 +39,7 @@ func TestWithOneProposer(t *testing.T){
 }
 
 func TestWithMultipleProposers(t *testing.T){
-	network := newPaxosEnvironment(1, 2, 3, 100, 101, 200)
+	network := NewPaxosEnvironment(1, 2, 3, 100, 101, 200)
 	inputString1 := "Hello World"
 	inputString2 := "Paxos"
 
@@ -48,7 +48,7 @@ func TestWithMultipleProposers(t *testing.T){
 	acceptorID := 1
 	for acceptorID < 4 {
 		node := network.getNodeNetwork(acceptorID)
-		acceptorList = append(acceptorList, *newAcceptor(acceptorID, node, 200))
+		acceptorList = append(acceptorList, *NewAcceptor(acceptorID, node, 200))
 		acceptorID+=1
 	}
 
