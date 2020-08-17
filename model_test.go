@@ -21,15 +21,15 @@ func TestWithOneProposer(t *testing.T){
 
 	// Create Proposer
 	proposer := NewProposer(100, inputString, network.GetNodeNetwork(100), 1, 2, 3)
-	go proposer.run()
+	go proposer.Run()
 
 	for index :=range acceptorList {
-		go acceptorList[index].run()
+		go acceptorList[index].Accept()
 	}
 
 	// Create learner.
 	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
-	learnedValue := learner.run()
+	learnedValue := learner.Learn()
 
 	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
 
@@ -54,25 +54,25 @@ func TestWithMultipleProposers(t *testing.T){
 
 	// Create Proposer 1
 	proposer1 := NewProposer(100, inputString1, network.GetNodeNetwork(100), 1, 2, 3)
-	go proposer1.run()
+	go proposer1.Run()
 
 	for index :=range acceptorList {
-		go acceptorList[index].run()
+		go acceptorList[index].Accept()
 	}
 
 	// Create Proposer2
 	proposer2 := NewProposer(101, inputString2, network.GetNodeNetwork(101), 1, 2, 3)
 	time.AfterFunc(time.Second, func() {
-		proposer2.run()
+		proposer2.Run()
 	})
 
 	for index :=range acceptorList {
-		go acceptorList[index].run()
+		go acceptorList[index].Accept()
 	}
 
 	// Create learner.
 	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
-	learnedValue := learner.run()
+	learnedValue := learner.Learn()
 
 	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
 

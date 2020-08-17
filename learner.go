@@ -52,7 +52,7 @@ func (l *Learner) chosen() (messageData, bool) {
 	return messageData{}, false
 }
 
-func (l *Learner) run() string{
+func (l *Learner) Learn() string{
 	for{
 		msg := l.node.receive()
 		if msg==nil {

@@ -64,7 +64,7 @@ func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 	return &ack
 }
 
-func (a *Acceptor) run() {
+func (a *Acceptor) Accept() {
 	for{
 		logrus.Infof("Acceptor %d waiting for message", a.id)
 		message := a.node.receive()

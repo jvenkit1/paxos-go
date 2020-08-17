@@ -113,7 +113,7 @@ func (p *Proposer) receivePromise(promiseMessage messageData) {
 	}
 }
 
-func (p *Proposer) run() {
+func (p *Proposer) Run() {
 	for !p.reachedMajority() {
 		messageList := p.prepare()
 		for _, message := range messageList {
