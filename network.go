@@ -8,18 +8,18 @@ import (
 This file defines the network framework for the processes.
 */
 
-type environment struct {
+type Environnment struct {
 	cfg *Config
 	receiveQueues map[int]chan messageData
 }
 
-type paxosNode struct {
+type PaxosNode struct {
 	id int
-	env *environment
+	env *Environnment
 }
 
-func NewPaxosEnvironment(nodes ...int) *environment {
-	env := environment{
+func NewPaxosEnvironment(nodes ...int) *Environnment {
+	env := Environnment{
 		receiveQueues: make(map[int]chan messageData, 0),
 	}
 	for _, node := range nodes {
@@ -28,21 +28,21 @@ func NewPaxosEnvironment(nodes ...int) *environment {
 	return &env
 }
 
-func (env *environment) GetNodeNetwork(id int) paxosNode {
-	return paxosNode{
+func (env *Environnment) GetNodeNetwork(id int) PaxosNode {
+	return PaxosNode{
 		id: id,
 		env: env,
 	}
 }
 
 // sends a message to the target node. Basically gets added to the correct channel
-func (env *environment) sendMessage(m messageData) {
+func (env *Environnment) sendMessage(m messageData) {
 	m.timestamp = time.Now().String()
 	env.receiveQueues[m.messageRecipient] <- m
 }
 
 // Client represented by given id receives the message
-func (env *environment) receiveMessage(id int) *messageData{
+func (env *Environnment) receiveMessage(id int) *messageData{
 	select {
 	case msg := <-env.receiveQueues[id]:
 		return &msg
@@ -51,11 +51,11 @@ func (env *environment) receiveMessage(id int) *messageData{
 	}
 }
 
-func (node *paxosNode) send(m messageData){
+func (node *PaxosNode) send(m messageData){
 	//m.printMessage("Printing inside send()")
 	node.env.sendMessage(m)
 }
 
-func (node *paxosNode) receive() *messageData {
+func (node *PaxosNode) receive() *messageData {
 	return node.env.receiveMessage(node.id)
 }

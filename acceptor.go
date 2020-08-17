@@ -13,10 +13,10 @@ type Acceptor struct {
 
 	acceptedMessage messageData
 	promisedMessage messageData
-	node paxosNode
+	node            PaxosNode
 }
 
-func NewAcceptor(id int, node paxosNode, learners ...int) *Acceptor {
+func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
 	return &Acceptor{
 		id: id,
 		node: node,

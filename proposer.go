@@ -5,15 +5,15 @@ import (
 )
 
 type Proposer struct {
-	id int
-	seq int
+	id             int
+	seq            int
 	proposalNumber int
-	proposalValue string
-	acceptors map[int]messageData
-	node paxosNode
+	proposalValue  string
+	acceptors      map[int]messageData
+	node           PaxosNode
 }
 
-func NewProposer(id int, value string, node paxosNode, acceptors ...int) *Proposer{
+func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Proposer{
 	newProposer := Proposer{
 		id: id,
 		seq: 0,

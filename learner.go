@@ -5,12 +5,12 @@ import (
 )
 
 type Learner struct {
-	id int
+	id               int
 	acceptedMessages map[int]messageData
-	node paxosNode
+	node             PaxosNode
 }
 
-func NewLearner(id int, node paxosNode, acceptorIDList ...int) *Learner {
+func NewLearner(id int, node PaxosNode, acceptorIDList ...int) *Learner {
 	newLearner := Learner{
 		id: id,
 		node: node,
