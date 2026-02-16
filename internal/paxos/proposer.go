@@ -46,10 +46,10 @@ func (p *Proposer) getPromiseCount() int {
 		slog.Info("Proposer information",
 			"Proposer ID", p.id,
 			"Acceptor Count", len(p.acceptors),
-			"Current Proposal Number", p.getProposerNumber(),
+			"Current Proposal Number", p.proposalNumber,
 			"Message Sequence Number", message.getMessageNumber(),
 		)
-		if message.getMessageNumber() == p.getProposerNumber() {
+		if message.getMessageNumber() == p.proposalNumber {
 			promiseCount+=1
 		}
 	}
@@ -61,84 +61,107 @@ func (p *Proposer) reachedMajority() bool {
 	return p.getPromiseCount() >= p.majority()
 }
 
-// send prepare message to the majority of acceptors
+// send prepare message to all acceptors
 func (p *Proposer) prepare() []messageData {
 	p.seq+=1
-	sentCount := 0
+	p.getProposerNumber()
+	// Reset acceptor promise state for this new round
+	for acceptorID := range p.acceptors {
+		p.acceptors[acceptorID] = messageData{}
+	}
 	var messageList []messageData
-	for acceptorID, _ := range p.acceptors {
+	for acceptorID := range p.acceptors {
 		message := messageData{
 			messageSender: p.id,
 			messageRecipient: acceptorID,
 			messageCategory: PrepareMessage,
-			messageNumber: p.getProposerNumber(),
+			messageNumber: p.proposalNumber,
 			value: p.proposalValue,
 		}
 		messageList = append(messageList, message)
-		sentCount+=1
-		if sentCount >= p.majority() {
-			break
-		}
 	}
 	return messageList
 }
 
-// send propose message to the majority of acceptors
+// send propose message to acceptors that promised
 func (p *Proposer) propose() []messageData {
-	sentCount := 0
 	var messageList []messageData
 	for acceptorID, acceptorMessage := range p.acceptors {
-		if acceptorMessage.getMessageNumber() == p.getProposerNumber() {
+		if acceptorMessage.getMessageNumber() > 0 {
 			message := messageData{
 				messageSender: p.id,
 				messageRecipient: acceptorID,
 				messageCategory: ProposeMessage,
-				messageNumber: p.getProposerNumber(),
+				messageNumber: p.proposalNumber,
 				value: p.proposalValue,
 			}
 			messageList = append(messageList, message)
-			sentCount += 1
-		}
-		if sentCount >= p.majority() {
-			break
 		}
 	}
 	return messageList
 }
 
+// receivePromise records a promise from an acceptor and adopts
+// the highest-numbered previously accepted value (P2c invariant).
 func (p *Proposer) receivePromise(promiseMessage messageData) {
-	promise := p.acceptors[promiseMessage.messageSender]
-	if promise.getMessageNumber() < promiseMessage.getMessageNumber() {
-		p.acceptors[promiseMessage.messageSender] = promiseMessage
-		if promiseMessage.getMessageNumber() > p.getProposerNumber() {
-			p.proposalNumber = promiseMessage.getMessageNumber()
-			p.proposalValue = promiseMessage.getProposalValue()
+	_, known := p.acceptors[promiseMessage.messageSender]
+	if !known {
+		return
+	}
+	p.acceptors[promiseMessage.messageSender] = promiseMessage
+
+	// P2c: if the acceptor reports a previously accepted value,
+	// adopt it if its proposal number is higher than any we've seen.
+	if promiseMessage.getMessageNumber() > 0 && promiseMessage.value != "" {
+		// Track highest accepted proposal number across all promises
+		highestNum := 0
+		highestVal := p.proposalValue
+		for _, msg := range p.acceptors {
+			if msg.getMessageNumber() > highestNum && msg.value != "" {
+				highestNum = msg.getMessageNumber()
+				highestVal = msg.value
+			}
 		}
+		p.proposalValue = highestVal
 	}
 }
 
 func (p *Proposer) Run() {
-	for !p.reachedMajority() {
+	for {
+		// Phase 1a: send prepare messages
 		messageList := p.prepare()
 		for _, message := range messageList {
 			p.node.send(message)
 		}
 
-		msg := p.node.receive()
-		if msg==nil {
-			continue
+		// Phase 1b: collect promises until majority or timeout
+		for !p.reachedMajority() {
+			msg := p.node.receive()
+			if msg == nil {
+				// Timeout — no more messages, re-prepare with higher number
+				break
+			}
+			msg.printMessage("Proposer received message")
+			if msg.messageCategory == AckMessage {
+				slog.Info(fmt.Sprintf("Ack message received from %d", msg.messageSender))
+				p.receivePromise(*msg)
+			} else {
+				slog.Error("Unsupported Message format")
+				os.Exit(1)
+			}
 		}
-		msg.printMessage("Proposer received message")
-		if msg.messageCategory == AckMessage {
-			slog.Info(fmt.Sprintf("Ack message received from %d", msg.messageSender))
-			p.receivePromise(*msg)
-		}else {
-			slog.Error("Unsupported Message format")
-			os.Exit(1)
+
+		if p.reachedMajority() {
+			break
 		}
+		// Did not reach majority — loop will re-prepare with higher seq
+		slog.Info("Proposer did not reach majority, retrying",
+			"Proposer ID", p.id,
+			"Proposal Number", p.proposalNumber,
+		)
 	}
-	// Majority has been reached
-	// Proposer now sends message to the acceptor
+
+	// Phase 2a: send propose messages to acceptors that promised
 	proposerMessageList := p.propose()
 	for _, message := range proposerMessageList {
 		p.node.send(message)

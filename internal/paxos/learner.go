@@ -39,6 +39,9 @@ func (l *Learner) chosen() (messageData, bool) {
 
 	for _, message := range l.acceptedMessages {
 		proposalNumber := message.getMessageNumber()
+		if proposalNumber == 0 {
+			continue // skip uninitialized entries
+		}
 		acceptedMessageCount[proposalNumber]+=1
 		acceptedMessageMap[proposalNumber]=message
 	}
