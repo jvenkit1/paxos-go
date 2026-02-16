@@ -44,7 +44,7 @@ func (l *Learner) chosen() (messageData, bool) {
 	}
 
 	for number, message := range acceptedMessageMap {
-		if acceptedMessageCount[number] > l.majority() {
+		if acceptedMessageCount[number] >= l.majority() {
 			return message, true
 		}
 	}

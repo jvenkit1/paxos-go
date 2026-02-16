@@ -31,8 +31,10 @@ func (p *Proposer) majority() int {
 	return len(p.acceptors)/2 + 1
 }
 
+const maxNodes = 10000
+
 func (p *Proposer) getProposerNumber() int {
-	p.proposalNumber  = p.seq << 4 | p.id
+	p.proposalNumber = p.seq*maxNodes + p.id
 	return p.proposalNumber
 }
 
@@ -54,7 +56,7 @@ func (p *Proposer) getPromiseCount() int {
 
 // consistency quorum
 func (p *Proposer) reachedMajority() bool {
-	return p.getPromiseCount() > p.majority()
+	return p.getPromiseCount() >= p.majority()
 }
 
 // send prepare message to the majority of acceptors
@@ -72,7 +74,7 @@ func (p *Proposer) prepare() []messageData {
 		}
 		messageList = append(messageList, message)
 		sentCount+=1
-		if sentCount > p.majority() {
+		if sentCount >= p.majority() {
 			break
 		}
 	}
@@ -95,7 +97,7 @@ func (p *Proposer) propose() []messageData {
 			messageList = append(messageList, message)
 			sentCount += 1
 		}
-		if sentCount > p.majority() {
+		if sentCount >= p.majority() {
 			break
 		}
 	}
