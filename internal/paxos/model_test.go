@@ -1,7 +1,8 @@
 package paxos
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -31,7 +32,7 @@ func TestWithOneProposer(t *testing.T){
 	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
 	learnedValue := learner.Learn()
 
-	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
+	slog.Info(fmt.Sprintf("Learner %d picked up value %s", learner.id, learnedValue))
 
 	if learnedValue != inputString {
 		t.Errorf("Learner learned wrong proposal")
@@ -74,7 +75,7 @@ func TestWithMultipleProposers(t *testing.T){
 	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
 	learnedValue := learner.Learn()
 
-	logrus.Infof("Learner %d picked up value %s", learner.id, learnedValue)
+	slog.Info(fmt.Sprintf("Learner %d picked up value %s", learner.id, learnedValue))
 
 	if learnedValue != inputString1 {
 		t.Errorf("Learner learned %v instead of %v", learnedValue, inputString1)

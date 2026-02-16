@@ -1,7 +1,7 @@
 package paxos
 
 import (
-	"github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 type Learner struct {
@@ -61,7 +61,7 @@ func (l *Learner) Learn() string{
 		l.validateAcceptMessage(*msg)
 		learnedMessage, learned := l.chosen()
 		if !learned {
-			logrus.Info("Learner hasn't learned anything yet.")
+			slog.Info("Learner hasn't learned anything yet.")
 			continue
 		}
 		return learnedMessage.value

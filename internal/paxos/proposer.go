@@ -1,7 +1,9 @@
 package paxos
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"log/slog"
+	"os"
 )
 
 type Proposer struct {
@@ -41,12 +43,12 @@ func (p *Proposer) getProposerNumber() int {
 func (p *Proposer) getPromiseCount() int {
 	promiseCount := 0
 	for _, message := range p.acceptors {
-		logrus.WithFields(logrus.Fields{
-			"Proposer ID": p.id,
-			"Acceptor Count": len(p.acceptors),
-			"Current Proposal Number": p.getProposerNumber(),
-			"Message Sequence Number": message.getMessageNumber(),
-		}).Info("Proposer information")
+		slog.Info("Proposer information",
+			"Proposer ID", p.id,
+			"Acceptor Count", len(p.acceptors),
+			"Current Proposal Number", p.getProposerNumber(),
+			"Message Sequence Number", message.getMessageNumber(),
+		)
 		if message.getMessageNumber() == p.getProposerNumber() {
 			promiseCount+=1
 		}
@@ -128,10 +130,11 @@ func (p *Proposer) Run() {
 		}
 		msg.printMessage("Proposer received message")
 		if msg.messageCategory == AckMessage {
-			logrus.Infof("Ack message received from %d", msg.messageSender)
+			slog.Info(fmt.Sprintf("Ack message received from %d", msg.messageSender))
 			p.receivePromise(*msg)
 		}else {
-			logrus.Fatal("Unsupported Message format")
+			slog.Error("Unsupported Message format")
+			os.Exit(1)
 		}
 	}
 	// Majority has been reached

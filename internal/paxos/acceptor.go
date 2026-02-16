@@ -2,7 +2,8 @@ package paxos
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"log/slog"
+	"os"
 )
 
 
@@ -28,27 +29,27 @@ func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
 // Receive a proposal message and return if accepted or not
 func (a *Acceptor) receiveProposeMessage(msg messageData) bool {
 	if a.acceptedMessage.getMessageNumber() < msg.getMessageNumber() || a.acceptedMessage.getMessageNumber() > msg.getMessageNumber() {
-		logrus.WithFields(logrus.Fields{
-			"Acceptor ID": a.id,
-			"Proposal ID": msg.getMessageNumber(),
-		}).Debug("Not taking proposed message")
+		slog.Debug("Not taking proposed message",
+			"Acceptor ID", a.id,
+			"Proposal ID", msg.getMessageNumber(),
+		)
 		return false
 	}
-	logrus.WithFields(logrus.Fields{
-		"Acceptor ID": a.id,
-		"Proposal ID": msg.getMessageNumber(),
-	}).Info("Accepted given proposed message")
+	slog.Info("Accepted given proposed message",
+		"Acceptor ID", a.id,
+		"Proposal ID", msg.getMessageNumber(),
+	)
 	return true
 }
 
 // Receive message of category Prepared and return an Ack Message
 func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 	if a.promisedMessage.getMessageNumber() >= msg.getMessageNumber() {
-		logrus.WithFields(logrus.Fields{
-			"Acceptor ID": a.id,
-			"Accepted Proposal ID": a.promisedMessage.getMessageNumber(),
-			"Request Proposal ID": msg.getMessageNumber(),
-		}).Error("Already accepted a larger proposal value message")
+		slog.Error("Already accepted a larger proposal value message",
+			"Acceptor ID", a.id,
+			"Accepted Proposal ID", a.promisedMessage.getMessageNumber(),
+			"Request Proposal ID", msg.getMessageNumber(),
+		)
 		return nil
 	}
 	ack := messageData{
@@ -66,7 +67,7 @@ func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 
 func (a *Acceptor) Accept() {
 	for{
-		logrus.Infof("Acceptor %d waiting for message", a.id)
+		slog.Info(fmt.Sprintf("Acceptor %d waiting for message", a.id))
 		message := a.node.receive()
 		if message == nil {
 			// null message obtained
@@ -96,7 +97,8 @@ func (a *Acceptor) Accept() {
 				}
 			}
 		default:
-			logrus.Fatalf("Sending unsupported message in acceptor %d", a.id)
+			slog.Error(fmt.Sprintf("Sending unsupported message in acceptor %d", a.id))
+			os.Exit(1)
 		}
 	}
 }

@@ -1,6 +1,6 @@
 package paxos
 
-import "github.com/sirupsen/logrus"
+import "log/slog"
 
 type messageType int
 
@@ -38,11 +38,11 @@ func (m *messageData) getMessageNumber() int {
 }
 
 func (m *messageData) printMessage(str string) {
-	logrus.WithFields(logrus.Fields{
-		"Source": m.messageSender,
-		"Destination": m.messageRecipient,
-		"Value": m.value,
-		"Sequence Number": m.messageNumber,
-		"Category": messages[m.messageCategory-1],
-	}).Info(str)
+	slog.Info(str,
+		"Source", m.messageSender,
+		"Destination", m.messageRecipient,
+		"Value", m.value,
+		"Sequence Number", m.messageNumber,
+		"Category", messages[m.messageCategory-1],
+	)
 }

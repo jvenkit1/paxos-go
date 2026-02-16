@@ -1,7 +1,7 @@
 package paxos
 
 import (
-	"github.com/sirupsen/logrus"
+	"log/slog"
 	"os"
 	"github.com/go-yaml/yaml"
 )
@@ -16,13 +16,13 @@ type Config struct {
 func ReadFile(cfg *Config){
 	f, err:= os.Open("config.yaml")
 	if err != nil {
-		logrus.WithError(err).Error("Error opening config file")
+		slog.Error("Error opening config file", "error", err)
 	}
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(cfg)
 	if err != nil {
-		logrus.WithError(err).Error("Error parsing yaml object")
+		slog.Error("Error parsing yaml object", "error", err)
 	}
 }
