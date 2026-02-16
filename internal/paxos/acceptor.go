@@ -27,14 +27,17 @@ func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
 }
 
 // Receive a proposal message and return if accepted or not
+// Phase 2b: accept unless we have already promised a higher number
 func (a *Acceptor) receiveProposeMessage(msg messageData) bool {
-	if a.acceptedMessage.getMessageNumber() < msg.getMessageNumber() || a.acceptedMessage.getMessageNumber() > msg.getMessageNumber() {
+	if a.promisedMessage.getMessageNumber() > msg.getMessageNumber() {
 		slog.Debug("Not taking proposed message",
 			"Acceptor ID", a.id,
 			"Proposal ID", msg.getMessageNumber(),
+			"Promised ID", a.promisedMessage.getMessageNumber(),
 		)
 		return false
 	}
+	a.acceptedMessage = msg
 	slog.Info("Accepted given proposed message",
 		"Acceptor ID", a.id,
 		"Proposal ID", msg.getMessageNumber(),
@@ -52,15 +55,22 @@ func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 		)
 		return nil
 	}
+	// Include previously accepted value (if any) so proposer can adopt it (P2c)
+	ackValue := msg.value
+	ackNumber := msg.messageNumber
+	if a.acceptedMessage.getMessageNumber() > 0 {
+		ackValue = a.acceptedMessage.value
+		ackNumber = a.acceptedMessage.messageNumber
+	}
 	ack := messageData{
 		messageSender: a.id,
 		messageRecipient: msg.messageSender,
-		messageNumber: msg.messageNumber,
-		value: msg.value,
+		messageNumber: ackNumber,
+		value: ackValue,
 		messageCategory: AckMessage,  // Promise
 	}
 	ack.printMessage("Inside receivePreparedMessage")
-	a.acceptedMessage = ack
+	a.promisedMessage = msg
 
 	return &ack
 }
@@ -77,6 +87,9 @@ func (a *Acceptor) Accept() {
 		switch message.messageCategory {
 		case PrepareMessage:
 			ack := a.receivePreparedMessage(*message)
+			if ack == nil {
+				continue
+			}
 			ack.printMessage("Sending ACK message")
 			a.node.send(*ack)
 			continue
