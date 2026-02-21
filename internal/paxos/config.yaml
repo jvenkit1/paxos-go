@@ -1,4 +1,0 @@
-numbers:
-  leaders: 4
-  replicas: 4
-  acceptor: 7

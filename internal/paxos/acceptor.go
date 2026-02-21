@@ -15,15 +15,21 @@ type Acceptor struct {
 	acceptedMessage messageData
 	promisedMessage messageData
 	node            PaxosNode
+	done            chan struct{}
 }
 
 func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
 	return &Acceptor{
-		id: id,
-		node: node,
-		learners: learners,
+		id:              id,
+		node:            node,
+		learners:        learners,
 		promisedMessage: messageData{},
+		done:            make(chan struct{}),
 	}
+}
+
+func (a *Acceptor) Stop() {
+	close(a.done)
 }
 
 // Receive a proposal message and return if accepted or not
@@ -77,6 +83,11 @@ func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
 
 func (a *Acceptor) Accept() {
 	for{
+		select {
+		case <-a.done:
+			return
+		default:
+		}
 		slog.Info(fmt.Sprintf("Acceptor %d waiting for message", a.id))
 		message := a.node.receive()
 		if message == nil {

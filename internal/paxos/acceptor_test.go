@@ -2,6 +2,7 @@ package paxos
 
 import (
 	"testing"
+	"time"
 )
 
 func newTestAcceptor(id int) (*Acceptor, *Environment) {
@@ -204,5 +205,25 @@ func TestNoAcceptedValueInFirstPromise(t *testing.T) {
 	}
 	if ack.messageNumber != 10100 {
 		t.Errorf("first ack should carry prepare's number: got %d, want 10100", ack.messageNumber)
+	}
+}
+
+func TestAcceptorGracefulShutdown(t *testing.T) {
+	a, _ := newTestAcceptor(1)
+
+	exited := make(chan struct{})
+	go func() {
+		a.Accept()
+		close(exited)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	a.Stop()
+
+	select {
+	case <-exited:
+		// Success: Accept() returned
+	case <-time.After(3 * time.Second):
+		t.Fatal("Acceptor did not shut down within 3 seconds after Stop()")
 	}
 }

@@ -9,7 +9,6 @@ This file defines the network framework for the processes.
 */
 
 type Environment struct {
-	cfg *Config
 	receiveQueues map[int]chan messageData
 }
 

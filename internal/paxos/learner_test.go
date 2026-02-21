@@ -2,6 +2,7 @@ package paxos
 
 import (
 	"testing"
+	"time"
 )
 
 func TestLearnerMajority(t *testing.T) {
@@ -90,5 +91,27 @@ func TestLearnerChosenNoMajority(t *testing.T) {
 	_, chosen := l.chosen()
 	if chosen {
 		t.Error("chosen() should return false when all acceptors have different proposal numbers")
+	}
+}
+
+func TestLearnerGracefulShutdown(t *testing.T) {
+	env := NewPaxosEnvironment(1, 2, 3, 200)
+	node := env.GetNodeNetwork(200)
+	l := NewLearner(200, node, 1, 2, 3)
+
+	exited := make(chan struct{})
+	go func() {
+		l.Learn()
+		close(exited)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	l.Stop()
+
+	select {
+	case <-exited:
+		// Success: Learn() returned
+	case <-time.After(3 * time.Second):
+		t.Fatal("Learner did not shut down within 3 seconds after Stop()")
 	}
 }

@@ -3,7 +3,9 @@ package paxos
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
+	"time"
 )
 
 type Proposer struct {
@@ -159,6 +161,9 @@ func (p *Proposer) Run() {
 			"Proposer ID", p.id,
 			"Proposal Number", p.proposalNumber,
 		)
+		// Random backoff to reduce livelock probability with competing proposers
+		backoff := time.Duration(rand.Intn(150)+50) * time.Millisecond
+		time.Sleep(backoff)
 	}
 
 	// Phase 2a: send propose messages to acceptors that promised

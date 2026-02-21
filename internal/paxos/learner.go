@@ -8,18 +8,24 @@ type Learner struct {
 	id               int
 	acceptedMessages map[int]messageData
 	node             PaxosNode
+	done             chan struct{}
 }
 
 func NewLearner(id int, node PaxosNode, acceptorIDList ...int) *Learner {
 	newLearner := Learner{
-		id: id,
+		id:   id,
 		node: node,
+		done: make(chan struct{}),
 	}
 	newLearner.acceptedMessages = make(map[int]messageData)
 	for _, acceptorID := range acceptorIDList {
 		newLearner.acceptedMessages[acceptorID] = messageData{}
 	}
 	return &newLearner
+}
+
+func (l *Learner) Stop() {
+	close(l.done)
 }
 
 func (l *Learner) majority() int{
@@ -57,6 +63,11 @@ func (l *Learner) chosen() (messageData, bool) {
 
 func (l *Learner) Learn() string{
 	for{
+		select {
+		case <-l.done:
+			return ""
+		default:
+		}
 		msg := l.node.receive()
 		if msg==nil {
 			continue
