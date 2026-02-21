@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
-	"os"
 	"time"
 )
+
+const electionTimeout = 500 * time.Millisecond
 
 type Proposer struct {
 	id             int
@@ -15,6 +16,8 @@ type Proposer struct {
 	proposalValue  string
 	acceptors      map[int]messageData
 	node           PaxosNode
+	peers          []int
+	isLeader       bool
 }
 
 func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Proposer{
@@ -128,7 +131,62 @@ func (p *Proposer) receivePromise(promiseMessage messageData) {
 	}
 }
 
+// SetPeers configures the other proposer IDs that participate in leader election.
+// When peers are set, electLeader runs before the Paxos protocol.
+// When no peers are set, election is skipped (backward compatible).
+func (p *Proposer) SetPeers(peers ...int) {
+	p.peers = peers
+}
+
+// electLeader implements a simple highest-alive-ID-wins election.
+// Each proposer broadcasts a heartbeat to its peers and listens for
+// the duration of electionTimeout. If a heartbeat from a higher-ID
+// peer arrives, this proposer yields leadership.
+func (p *Proposer) electLeader() {
+	if len(p.peers) == 0 {
+		p.isLeader = true
+		return
+	}
+
+	// Broadcast heartbeat to all peers.
+	for _, peerID := range p.peers {
+		p.node.send(messageData{
+			messageSender:    p.id,
+			messageRecipient: peerID,
+			messageCategory:  HeartbeatMessage,
+		})
+	}
+
+	// Listen for heartbeats until the election window closes.
+	p.isLeader = true
+	deadline := time.Now().Add(electionTimeout)
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		msg := p.node.receiveWithTimeout(remaining)
+		if msg == nil {
+			break
+		}
+		if msg.messageCategory == HeartbeatMessage && msg.messageSender > p.id {
+			p.isLeader = false
+		}
+	}
+
+	if p.isLeader {
+		slog.Info("Elected as leader", "Proposer ID", p.id)
+	} else {
+		slog.Info("Deferring to higher-ID leader", "Proposer ID", p.id)
+	}
+}
+
 func (p *Proposer) Run() {
+	p.electLeader()
+	if !p.isLeader {
+		return
+	}
+
 	for {
 		// Phase 1a: send prepare messages
 		messageList := p.prepare()
@@ -147,9 +205,6 @@ func (p *Proposer) Run() {
 			if msg.messageCategory == AckMessage {
 				slog.Info(fmt.Sprintf("Ack message received from %d", msg.messageSender))
 				p.receivePromise(*msg)
-			} else {
-				slog.Error("Unsupported Message format")
-				os.Exit(1)
 			}
 		}
 

@@ -1,7 +1,10 @@
 package paxos
 
 import (
+	"fmt"
+	"log/slog"
 	"testing"
+	"time"
 )
 
 func TestProposalNumberMonotonicity(t *testing.T) {
@@ -240,5 +243,125 @@ func TestProposeOnlyToPromisedAcceptors(t *testing.T) {
 		if msg.messageCategory != ProposeMessage {
 			t.Errorf("propose() should produce ProposeMessage, got %d", msg.messageCategory)
 		}
+	}
+}
+
+func TestLeaderElectionHighestIDWins(t *testing.T) {
+	env := NewPaxosEnvironment(100, 101)
+
+	p1 := NewProposer(100, "val1", env.GetNodeNetwork(100))
+	p2 := NewProposer(101, "val2", env.GetNodeNetwork(101))
+	p1.SetPeers(101)
+	p2.SetPeers(100)
+
+	// Run elections concurrently.
+	done := make(chan int, 2)
+	go func() {
+		p1.electLeader()
+		done <- p1.id
+	}()
+	go func() {
+		p2.electLeader()
+		done <- p2.id
+	}()
+
+	// Wait for both to finish (election timeout ~500ms each).
+	<-done
+	<-done
+
+	if p1.isLeader {
+		t.Error("Proposer 100 (lower ID) should not be leader")
+	}
+	if !p2.isLeader {
+		t.Error("Proposer 101 (higher ID) should be leader")
+	}
+}
+
+func TestFollowerDefersToLeader(t *testing.T) {
+	network := NewPaxosEnvironment(1, 2, 3, 100, 101, 200)
+
+	// Create acceptors.
+	var acceptorList []*Acceptor
+	for id := 1; id <= 3; id++ {
+		node := network.GetNodeNetwork(id)
+		acceptorList = append(acceptorList, NewAcceptor(id, node, 200))
+	}
+	for _, acc := range acceptorList {
+		go acc.Accept()
+	}
+	defer func() {
+		for _, acc := range acceptorList {
+			acc.Stop()
+		}
+	}()
+
+	// Proposer 100 (follower) proposes "from-follower".
+	// Proposer 101 (leader) proposes "from-leader".
+	proposer1 := NewProposer(100, "from-follower", network.GetNodeNetwork(100), 1, 2, 3)
+	proposer2 := NewProposer(101, "from-leader", network.GetNodeNetwork(101), 1, 2, 3)
+	proposer1.SetPeers(101)
+	proposer2.SetPeers(100)
+
+	go proposer1.Run()
+	go proposer2.Run()
+
+	// Only the leader (101) runs Paxos, so the learner must learn "from-leader".
+	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
+	resultCh := make(chan string, 1)
+	go func() {
+		resultCh <- learner.Learn()
+	}()
+
+	select {
+	case learnedValue := <-resultCh:
+		slog.Info(fmt.Sprintf("Learner %d picked up value %s", learner.id, learnedValue))
+		if learnedValue != "from-leader" {
+			t.Errorf("Expected leader's value %q, got %q", "from-leader", learnedValue)
+		}
+	case <-time.After(10 * time.Second):
+		learner.Stop()
+		t.Fatal("TestFollowerDefersToLeader timed out")
+	}
+}
+
+func TestLeaderFailover(t *testing.T) {
+	// Proposer 100 has peer 101, but 101 never starts.
+	// After the election window, 100 should become leader and achieve consensus.
+	network := NewPaxosEnvironment(1, 2, 3, 100, 101, 200)
+
+	var acceptorList []*Acceptor
+	for id := 1; id <= 3; id++ {
+		node := network.GetNodeNetwork(id)
+		acceptorList = append(acceptorList, NewAcceptor(id, node, 200))
+	}
+	for _, acc := range acceptorList {
+		go acc.Accept()
+	}
+	defer func() {
+		for _, acc := range acceptorList {
+			acc.Stop()
+		}
+	}()
+
+	proposer := NewProposer(100, "failover-value", network.GetNodeNetwork(100), 1, 2, 3)
+	proposer.SetPeers(101)
+
+	go proposer.Run()
+
+	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
+	resultCh := make(chan string, 1)
+	go func() {
+		resultCh <- learner.Learn()
+	}()
+
+	select {
+	case learnedValue := <-resultCh:
+		slog.Info(fmt.Sprintf("Learner %d picked up value %s", learner.id, learnedValue))
+		if learnedValue != "failover-value" {
+			t.Errorf("Expected %q, got %q", "failover-value", learnedValue)
+		}
+	case <-time.After(10 * time.Second):
+		learner.Stop()
+		t.Fatal("TestLeaderFailover timed out")
 	}
 }

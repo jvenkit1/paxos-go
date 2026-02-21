@@ -40,14 +40,21 @@ func (env *Environment) sendMessage(m messageData) {
 	env.receiveQueues[m.messageRecipient] <- m
 }
 
-// Client represented by given id receives the message
-func (env *Environment) receiveMessage(id int) *messageData{
+func (env *Environment) receiveMessageWithTimeout(id int, timeout time.Duration) *messageData {
+	if timeout <= 0 {
+		return nil
+	}
 	select {
 	case msg := <-env.receiveQueues[id]:
 		return &msg
-	case <-time.After(time.Second):
+	case <-time.After(timeout):
 		return nil
 	}
+}
+
+// Client represented by given id receives the message
+func (env *Environment) receiveMessage(id int) *messageData {
+	return env.receiveMessageWithTimeout(id, time.Second)
 }
 
 func (node *PaxosNode) send(m messageData){
@@ -57,4 +64,8 @@ func (node *PaxosNode) send(m messageData){
 
 func (node *PaxosNode) receive() *messageData {
 	return node.env.receiveMessage(node.id)
+}
+
+func (node *PaxosNode) receiveWithTimeout(timeout time.Duration) *messageData {
+	return node.env.receiveMessageWithTimeout(node.id, timeout)
 }

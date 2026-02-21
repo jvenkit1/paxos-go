@@ -5,21 +5,22 @@ import "log/slog"
 type messageType int
 
 const (
-	PrepareMessage messageType = iota + 1
-	ProposeMessage  // propose a value - proposer - acceptor
-	AcceptMessage  // accept a given value - acceptor - learner
-	AckMessage  // promise response - acceptor - proposer
+	PrepareMessage   messageType = iota + 1
+	ProposeMessage               // propose a value - proposer - acceptor
+	AcceptMessage                // accept a given value - acceptor - learner
+	AckMessage                   // promise response - acceptor - proposer
+	HeartbeatMessage             // leader election heartbeat - proposer - proposer
 )
 
-var messages [4]string
+var messages [5]string
 
 type messageData struct {
-	messageSender int  // sender of the message
-	messageRecipient int  // recipient of the message
-	messageNumber int  // current Sequence number of the message
-	messageCategory messageType
-	value string  // value contained in the string
-	timestamp string
+	messageSender    int // sender of the message
+	messageRecipient int // recipient of the message
+	messageNumber    int // current Sequence number of the message
+	messageCategory  messageType
+	value            string // value contained in the string
+	timestamp        string
 }
 
 func init() {
@@ -27,6 +28,7 @@ func init() {
 	messages[1] = "ProposeMessage"
 	messages[2] = "AcceptMessage"
 	messages[3] = "AckMessage"
+	messages[4] = "HeartbeatMessage"
 }
 
 func (m *messageData) getProposalValue() string {

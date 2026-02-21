@@ -77,15 +77,15 @@ func TestWithMultipleProposers(t *testing.T){
 		}
 	}()
 
-	// Create and start Proposer 1
+	// Create proposers with leader election.
+	// Proposer 101 (higher ID) wins election and proposes inputString2.
 	proposer1 := NewProposer(100, inputString1, network.GetNodeNetwork(100), 1, 2, 3)
-	go proposer1.Run()
-
-	// Create and start Proposer 2 after a short delay
 	proposer2 := NewProposer(101, inputString2, network.GetNodeNetwork(101), 1, 2, 3)
-	time.AfterFunc(100*time.Millisecond, func() {
-		proposer2.Run()
-	})
+	proposer1.SetPeers(101)
+	proposer2.SetPeers(100)
+
+	go proposer1.Run()
+	go proposer2.Run()
 
 	// Create learner with timeout
 	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
@@ -98,9 +98,10 @@ func TestWithMultipleProposers(t *testing.T){
 	select {
 	case learnedValue := <-resultCh:
 		slog.Info(fmt.Sprintf("Learner %d picked up value %s", learner.id, learnedValue))
-		if learnedValue != inputString1 && learnedValue != inputString2 {
-			t.Errorf("Learner learned unexpected value %q; want %q or %q",
-				learnedValue, inputString1, inputString2)
+		// With leader election, proposer 101 (higher ID) wins and proposes inputString2.
+		if learnedValue != inputString2 {
+			t.Errorf("Learner learned %q, want %q (from leader proposer 101)",
+				learnedValue, inputString2)
 		}
 	case <-time.After(15 * time.Second):
 		t.Fatal("TestWithMultipleProposers timed out after 15 seconds")
