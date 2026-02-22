@@ -21,6 +21,7 @@ type messageData struct {
 	messageCategory  messageType
 	value            string // value contained in the string
 	timestamp        string
+	slot             int // paxos instance / log index
 }
 
 func init() {
@@ -31,20 +32,25 @@ func init() {
 	messages[4] = "HeartbeatMessage"
 }
 
-func (m *messageData) getProposalValue() string {
+func (m messageData) getProposalValue() string {
 	return m.value
 }
 
-func (m *messageData) getMessageNumber() int {
+func (m messageData) getMessageNumber() int {
 	return m.messageNumber
 }
 
-func (m *messageData) printMessage(str string) {
+func (m messageData) getSlot() int {
+	return m.slot
+}
+
+func (m messageData) printMessage(str string) {
 	slog.Info(str,
 		"Source", m.messageSender,
 		"Destination", m.messageRecipient,
 		"Value", m.value,
 		"Sequence Number", m.messageNumber,
 		"Category", messages[m.messageCategory-1],
+		"Slot", m.slot,
 	)
 }

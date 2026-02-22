@@ -53,7 +53,7 @@ func TestLearnerChosenExactMajority(t *testing.T) {
 		value:         "hello",
 	})
 
-	msg, chosen := l.chosen()
+	msg, chosen := l.chosen(0)
 	if !chosen {
 		t.Error("chosen() should return true with exactly 2 out of 3 acceptors agreeing")
 	}
@@ -88,7 +88,7 @@ func TestLearnerChosenNoMajority(t *testing.T) {
 		value:         "paxos",
 	})
 
-	_, chosen := l.chosen()
+	_, chosen := l.chosen(0)
 	if chosen {
 		t.Error("chosen() should return false when all acceptors have different proposal numbers")
 	}

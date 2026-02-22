@@ -27,13 +27,13 @@ func TestPromiseTracking(t *testing.T) {
 	}
 
 	// promisedMessage should be updated
-	if a.promisedMessage.getMessageNumber() != 10100 {
-		t.Errorf("promisedMessage not updated: got %d, want 10100", a.promisedMessage.getMessageNumber())
+	if a.promisedMessages[0].getMessageNumber() != 10100 {
+		t.Errorf("promisedMessage not updated: got %d, want 10100", a.promisedMessages[0].getMessageNumber())
 	}
 
 	// acceptedMessage should NOT be updated by a prepare
-	if a.acceptedMessage.getMessageNumber() != 0 {
-		t.Errorf("acceptedMessage should be untouched after prepare: got %d, want 0", a.acceptedMessage.getMessageNumber())
+	if a.acceptedMessages[0].getMessageNumber() != 0 {
+		t.Errorf("acceptedMessage should be untouched after prepare: got %d, want 0", a.acceptedMessages[0].getMessageNumber())
 	}
 }
 
@@ -87,11 +87,11 @@ func TestAcceptProposal(t *testing.T) {
 	}
 
 	// acceptedMessage should now be updated
-	if a.acceptedMessage.getMessageNumber() != 10100 {
-		t.Errorf("acceptedMessage not updated after accept: got %d, want 10100", a.acceptedMessage.getMessageNumber())
+	if a.acceptedMessages[0].getMessageNumber() != 10100 {
+		t.Errorf("acceptedMessage not updated after accept: got %d, want 10100", a.acceptedMessages[0].getMessageNumber())
 	}
-	if a.acceptedMessage.value != "hello" {
-		t.Errorf("acceptedMessage value wrong: got %q, want %q", a.acceptedMessage.value, "hello")
+	if a.acceptedMessages[0].value != "hello" {
+		t.Errorf("acceptedMessage value wrong: got %q, want %q", a.acceptedMessages[0].value, "hello")
 	}
 }
 

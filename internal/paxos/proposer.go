@@ -18,6 +18,7 @@ type Proposer struct {
 	node           PaxosNode
 	peers          []int
 	isLeader       bool
+	slot           int
 }
 
 func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Proposer{
@@ -77,11 +78,12 @@ func (p *Proposer) prepare() []messageData {
 	var messageList []messageData
 	for acceptorID := range p.acceptors {
 		message := messageData{
-			messageSender: p.id,
+			messageSender:    p.id,
 			messageRecipient: acceptorID,
-			messageCategory: PrepareMessage,
-			messageNumber: p.proposalNumber,
-			value: p.proposalValue,
+			messageCategory:  PrepareMessage,
+			messageNumber:    p.proposalNumber,
+			value:            p.proposalValue,
+			slot:             p.slot,
 		}
 		messageList = append(messageList, message)
 	}
@@ -94,11 +96,12 @@ func (p *Proposer) propose() []messageData {
 	for acceptorID, acceptorMessage := range p.acceptors {
 		if acceptorMessage.getMessageNumber() > 0 {
 			message := messageData{
-				messageSender: p.id,
+				messageSender:    p.id,
 				messageRecipient: acceptorID,
-				messageCategory: ProposeMessage,
-				messageNumber: p.proposalNumber,
-				value: p.proposalValue,
+				messageCategory:  ProposeMessage,
+				messageNumber:    p.proposalNumber,
+				value:            p.proposalValue,
+				slot:             p.slot,
 			}
 			messageList = append(messageList, message)
 		}

@@ -6,25 +6,25 @@ import (
 	"os"
 )
 
-
 // Acceptor
 type Acceptor struct {
-	id int
+	id       int
 	learners []int
 
-	acceptedMessage messageData
-	promisedMessage messageData
-	node            PaxosNode
-	done            chan struct{}
+	acceptedMessages map[int]messageData // key: slot
+	promisedMessages map[int]messageData // key: slot
+	node             PaxosNode
+	done             chan struct{}
 }
 
 func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
 	return &Acceptor{
-		id:              id,
-		node:            node,
-		learners:        learners,
-		promisedMessage: messageData{},
-		done:            make(chan struct{}),
+		id:               id,
+		node:             node,
+		learners:         learners,
+		promisedMessages: make(map[int]messageData),
+		acceptedMessages: make(map[int]messageData),
+		done:             make(chan struct{}),
 	}
 }
 
@@ -35,17 +35,21 @@ func (a *Acceptor) Stop() {
 // Receive a proposal message and return if accepted or not
 // Phase 2b: accept unless we have already promised a higher number
 func (a *Acceptor) receiveProposeMessage(msg messageData) bool {
-	if a.promisedMessage.getMessageNumber() > msg.getMessageNumber() {
+	slot := msg.slot
+	promised := a.promisedMessages[slot]
+	if promised.getMessageNumber() > msg.getMessageNumber() {
 		slog.Debug("Not taking proposed message",
 			"Acceptor ID", a.id,
+			"Slot", slot,
 			"Proposal ID", msg.getMessageNumber(),
-			"Promised ID", a.promisedMessage.getMessageNumber(),
+			"Promised ID", promised.getMessageNumber(),
 		)
 		return false
 	}
-	a.acceptedMessage = msg
+	a.acceptedMessages[slot] = msg
 	slog.Info("Accepted given proposed message",
 		"Acceptor ID", a.id,
+		"Slot", slot,
 		"Proposal ID", msg.getMessageNumber(),
 	)
 	return true
@@ -53,36 +57,41 @@ func (a *Acceptor) receiveProposeMessage(msg messageData) bool {
 
 // Receive message of category Prepared and return an Ack Message
 func (a *Acceptor) receivePreparedMessage(msg messageData) *messageData {
-	if a.promisedMessage.getMessageNumber() >= msg.getMessageNumber() {
+	slot := msg.slot
+	promised := a.promisedMessages[slot]
+	if promised.getMessageNumber() >= msg.getMessageNumber() {
 		slog.Error("Already accepted a larger proposal value message",
 			"Acceptor ID", a.id,
-			"Accepted Proposal ID", a.promisedMessage.getMessageNumber(),
+			"Slot", slot,
+			"Accepted Proposal ID", promised.getMessageNumber(),
 			"Request Proposal ID", msg.getMessageNumber(),
 		)
 		return nil
 	}
 	// Include previously accepted value (if any) so proposer can adopt it (P2c)
+	accepted := a.acceptedMessages[slot]
 	ackValue := msg.value
 	ackNumber := msg.messageNumber
-	if a.acceptedMessage.getMessageNumber() > 0 {
-		ackValue = a.acceptedMessage.value
-		ackNumber = a.acceptedMessage.messageNumber
+	if accepted.getMessageNumber() > 0 {
+		ackValue = accepted.value
+		ackNumber = accepted.messageNumber
 	}
 	ack := messageData{
-		messageSender: a.id,
+		messageSender:    a.id,
 		messageRecipient: msg.messageSender,
-		messageNumber: ackNumber,
-		value: ackValue,
-		messageCategory: AckMessage,  // Promise
+		messageNumber:    ackNumber,
+		value:            ackValue,
+		messageCategory:  AckMessage, // Promise
+		slot:             slot,
 	}
 	ack.printMessage("Inside receivePreparedMessage")
-	a.promisedMessage = msg
+	a.promisedMessages[slot] = msg
 
 	return &ack
 }
 
 func (a *Acceptor) Accept() {
-	for{
+	for {
 		select {
 		case <-a.done:
 			return
@@ -110,11 +119,12 @@ func (a *Acceptor) Accept() {
 				// send to all learners
 				for _, learnerID := range a.learners {
 					sendMessage := messageData{
-						messageSender: a.id,
+						messageSender:    a.id,
 						messageRecipient: learnerID,
-						messageCategory: AcceptMessage,
-						messageNumber: message.messageNumber,
-						value: message.value,
+						messageCategory:  AcceptMessage,
+						messageNumber:    message.messageNumber,
+						value:            message.value,
+						slot:             message.slot,
 					}
 					sendMessage.printMessage(fmt.Sprintf("Sending message to learner %d", learnerID))
 					a.node.send(sendMessage)
