@@ -246,6 +246,59 @@ func TestProposeOnlyToPromisedAcceptors(t *testing.T) {
 	}
 }
 
+func TestSubmitAndClose(t *testing.T) {
+	env := NewPaxosEnvironment(1, 2, 3, 100)
+	node := env.GetNodeNetwork(100)
+	p := NewProposer(100, "initial", node, 1, 2, 3)
+
+	values := []string{"alpha", "beta", "gamma"}
+	for _, v := range values {
+		p.Submit(v)
+	}
+	p.Close()
+
+	var received []string
+	for v := range p.values {
+		received = append(received, v)
+	}
+
+	if len(received) != len(values) {
+		t.Fatalf("expected %d values, got %d", len(values), len(received))
+	}
+	for i, v := range values {
+		if received[i] != v {
+			t.Errorf("value[%d]: got %q, want %q", i, received[i], v)
+		}
+	}
+}
+
+func TestRunSlotSetsSlotField(t *testing.T) {
+	env := NewPaxosEnvironment(1, 2, 3, 100)
+	node := env.GetNodeNetwork(100)
+	p := NewProposer(100, "test", node, 1, 2, 3)
+
+	// Set slot to 2 and verify prepare/propose messages carry that slot.
+	p.slot = 2
+	msgs := p.prepare()
+	for _, msg := range msgs {
+		if msg.slot != 2 {
+			t.Errorf("prepare() message slot: got %d, want 2", msg.slot)
+		}
+	}
+
+	// Simulate promises so propose() produces messages.
+	for accID := range p.acceptors {
+		p.acceptors[accID] = messageData{messageNumber: p.proposalNumber, value: "test"}
+	}
+
+	propMsgs := p.propose()
+	for _, msg := range propMsgs {
+		if msg.slot != 2 {
+			t.Errorf("propose() message slot: got %d, want 2", msg.slot)
+		}
+	}
+}
+
 func TestLeaderElectionHighestIDWins(t *testing.T) {
 	env := NewPaxosEnvironment(100, 101)
 

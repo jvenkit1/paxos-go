@@ -68,6 +68,30 @@ func (l *Learner) chosen(slot int) (messageData, bool) {
 	return messageData{}, false
 }
 
+// LearnMulti collects decided values across multiple slots until all numSlots are decided.
+func (l *Learner) LearnMulti(numSlots int) map[int]string {
+	decided := make(map[int]string)
+	for len(decided) < numSlots {
+		select {
+		case <-l.done:
+			return decided
+		default:
+		}
+		msg := l.node.receive()
+		if msg == nil {
+			continue
+		}
+		l.validateAcceptMessage(*msg)
+		learnedMessage, learned := l.chosen(msg.slot)
+		if learned {
+			if _, ok := decided[msg.slot]; !ok {
+				decided[msg.slot] = learnedMessage.value
+			}
+		}
+	}
+	return decided
+}
+
 func (l *Learner) Learn() string {
 	for {
 		select {

@@ -94,6 +94,40 @@ func TestLearnerChosenNoMajority(t *testing.T) {
 	}
 }
 
+func TestChosenPerSlot(t *testing.T) {
+	env := NewPaxosEnvironment(1, 2, 3, 200)
+	node := env.GetNodeNetwork(200)
+	l := NewLearner(200, node, 1, 2, 3)
+
+	proposalNum := 10100
+
+	// Slot 0: "alpha" accepted by acceptors 1 and 2 (majority)
+	l.validateAcceptMessage(messageData{
+		messageSender: 1, messageNumber: proposalNum, value: "alpha", slot: 0,
+	})
+	l.validateAcceptMessage(messageData{
+		messageSender: 2, messageNumber: proposalNum, value: "alpha", slot: 0,
+	})
+
+	// Slot 1: "beta" accepted by acceptors 2 and 3 (majority)
+	l.validateAcceptMessage(messageData{
+		messageSender: 2, messageNumber: proposalNum, value: "beta", slot: 1,
+	})
+	l.validateAcceptMessage(messageData{
+		messageSender: 3, messageNumber: proposalNum, value: "beta", slot: 1,
+	})
+
+	msg0, chosen0 := l.chosen(0)
+	if !chosen0 || msg0.value != "alpha" {
+		t.Errorf("slot 0: chosen=%v value=%q, want chosen=true value=%q", chosen0, msg0.value, "alpha")
+	}
+
+	msg1, chosen1 := l.chosen(1)
+	if !chosen1 || msg1.value != "beta" {
+		t.Errorf("slot 1: chosen=%v value=%q, want chosen=true value=%q", chosen1, msg1.value, "beta")
+	}
+}
+
 func TestLearnerGracefulShutdown(t *testing.T) {
 	env := NewPaxosEnvironment(1, 2, 3, 200)
 	node := env.GetNodeNetwork(200)

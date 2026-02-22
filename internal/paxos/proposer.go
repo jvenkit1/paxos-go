@@ -19,6 +19,7 @@ type Proposer struct {
 	peers          []int
 	isLeader       bool
 	slot           int
+	values         chan string
 }
 
 func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Proposer{
@@ -27,6 +28,7 @@ func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Propos
 		seq: 0,
 		proposalValue: value,
 		node: node,
+		values: make(chan string, 64),
 	}
 	newProposer.acceptors = make(map[int]messageData, len(acceptors))
 	for _, acceptor := range acceptors {
@@ -141,6 +143,16 @@ func (p *Proposer) SetPeers(peers ...int) {
 	p.peers = peers
 }
 
+// Submit enqueues a value for multi-decree consensus.
+func (p *Proposer) Submit(value string) {
+	p.values <- value
+}
+
+// Close signals that no more values will be submitted.
+func (p *Proposer) Close() {
+	close(p.values)
+}
+
 // electLeader implements a simple highest-alive-ID-wins election.
 // Each proposer broadcasts a heartbeat to its peers and listens for
 // the duration of electionTimeout. If a heartbeat from a higher-ID
@@ -184,11 +196,10 @@ func (p *Proposer) electLeader() {
 	}
 }
 
-func (p *Proposer) Run() {
-	p.electLeader()
-	if !p.isLeader {
-		return
-	}
+func (p *Proposer) runSlot(slot int, value string) {
+	p.slot = slot
+	p.proposalValue = value
+	p.seq = 0
 
 	for {
 		// Phase 1a: send prepare messages
@@ -205,7 +216,7 @@ func (p *Proposer) Run() {
 				break
 			}
 			msg.printMessage("Proposer received message")
-			if msg.messageCategory == AckMessage {
+			if msg.messageCategory == AckMessage && msg.slot == p.slot {
 				slog.Info(fmt.Sprintf("Ack message received from %d", msg.messageSender))
 				p.receivePromise(*msg)
 			}
@@ -228,5 +239,26 @@ func (p *Proposer) Run() {
 	proposerMessageList := p.propose()
 	for _, message := range proposerMessageList {
 		p.node.send(message)
+	}
+}
+
+func (p *Proposer) Run() {
+	p.electLeader()
+	if !p.isLeader {
+		return
+	}
+	p.runSlot(0, p.proposalValue)
+}
+
+// RunMulti drives consensus across multiple slots, one per submitted value.
+func (p *Proposer) RunMulti() {
+	p.electLeader()
+	if !p.isLeader {
+		return
+	}
+	slot := 0
+	for value := range p.values {
+		p.runSlot(slot, value)
+		slot++
 	}
 }

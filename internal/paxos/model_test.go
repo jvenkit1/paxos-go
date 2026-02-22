@@ -53,6 +53,57 @@ func TestWithOneProposer(t *testing.T){
 	}
 }
 
+func TestMultiDecree(t *testing.T) {
+	network := NewPaxosEnvironment(1, 2, 3, 100, 200)
+
+	// Create acceptors
+	var acceptorList []*Acceptor
+	for id := 1; id <= 3; id++ {
+		node := network.GetNodeNetwork(id)
+		acceptorList = append(acceptorList, NewAcceptor(id, node, 200))
+	}
+	for _, acc := range acceptorList {
+		go acc.Accept()
+	}
+	defer func() {
+		for _, acc := range acceptorList {
+			acc.Stop()
+		}
+	}()
+
+	// Create proposer and submit 3 values
+	proposer := NewProposer(100, "", network.GetNodeNetwork(100), 1, 2, 3)
+	proposer.Submit("alpha")
+	proposer.Submit("beta")
+	proposer.Submit("gamma")
+	proposer.Close()
+
+	go proposer.RunMulti()
+
+	// Create learner to collect all 3 slots
+	learner := NewLearner(200, network.GetNodeNetwork(200), 1, 2, 3)
+	resultCh := make(chan map[int]string, 1)
+	go func() {
+		resultCh <- learner.LearnMulti(3)
+	}()
+
+	select {
+	case decided := <-resultCh:
+		expected := map[int]string{0: "alpha", 1: "beta", 2: "gamma"}
+		for slot, want := range expected {
+			got, ok := decided[slot]
+			if !ok {
+				t.Errorf("slot %d: not decided", slot)
+			} else if got != want {
+				t.Errorf("slot %d: got %q, want %q", slot, got, want)
+			}
+		}
+	case <-time.After(15 * time.Second):
+		learner.Stop()
+		t.Fatal("TestMultiDecree timed out after 15 seconds")
+	}
+}
+
 func TestWithMultipleProposers(t *testing.T){
 	network := NewPaxosEnvironment(1, 2, 3, 100, 101, 200)
 	inputString1 := "Hello World"
