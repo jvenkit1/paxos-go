@@ -13,11 +13,11 @@ type Acceptor struct {
 
 	acceptedMessages map[int]messageData // key: slot
 	promisedMessages map[int]messageData // key: slot
-	node             PaxosNode
+	node             nodeNetwork
 	done             chan struct{}
 }
 
-func NewAcceptor(id int, node PaxosNode, learners ...int) *Acceptor {
+func NewAcceptor(id int, node nodeNetwork, learners ...int) *Acceptor {
 	return &Acceptor{
 		id:               id,
 		node:             node,

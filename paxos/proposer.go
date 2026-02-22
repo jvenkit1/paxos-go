@@ -15,14 +15,14 @@ type Proposer struct {
 	proposalNumber int
 	proposalValue  string
 	acceptors      map[int]messageData
-	node           PaxosNode
+	node           nodeNetwork
 	peers          []int
 	isLeader       bool
 	slot           int
 	values         chan string
 }
 
-func NewProposer(id int, value string, node PaxosNode, acceptors ...int) *Proposer{
+func NewProposer(id int, value string, node nodeNetwork, acceptors ...int) *Proposer{
 	newProposer := Proposer{
 		id: id,
 		seq: 0,

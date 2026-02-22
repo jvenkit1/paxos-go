@@ -8,11 +8,11 @@ type Learner struct {
 	id               int
 	numAcceptors     int
 	acceptedMessages map[int]map[int]messageData // slot -> acceptor ID -> messageData
-	node             PaxosNode
+	node             nodeNetwork
 	done             chan struct{}
 }
 
-func NewLearner(id int, node PaxosNode, acceptorIDList ...int) *Learner {
+func NewLearner(id int, node nodeNetwork, acceptorIDList ...int) *Learner {
 	return &Learner{
 		id:               id,
 		node:             node,

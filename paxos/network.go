@@ -12,6 +12,12 @@ type Environment struct {
 	receiveQueues map[int]chan messageData
 }
 
+type nodeNetwork interface {
+	send(m messageData)
+	receive() *messageData
+	receiveWithTimeout(timeout time.Duration) *messageData
+}
+
 type PaxosNode struct {
 	id int
 	env *Environment
@@ -27,8 +33,8 @@ func NewPaxosEnvironment(nodes ...int) *Environment {
 	return &env
 }
 
-func (env *Environment) GetNodeNetwork(id int) PaxosNode {
-	return PaxosNode{
+func (env *Environment) GetNodeNetwork(id int) *PaxosNode {
+	return &PaxosNode{
 		id: id,
 		env: env,
 	}
