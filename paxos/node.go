@@ -3,6 +3,7 @@ package paxos
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -25,7 +26,14 @@ func (rn *routedNode) send(m messageData) {
 		rn.router.deliverLocal(m)
 		return
 	}
-	rn.router.transport.Send(toPublicMessage(m))
+	if err := rn.router.transport.Send(toPublicMessage(m)); err != nil {
+		slog.Warn("transport send failed",
+			"from", m.messageSender,
+			"to", m.messageRecipient,
+			"type", messages[m.messageCategory-1],
+			"err", err,
+		)
+	}
 }
 
 func (rn *routedNode) receive() *messageData {
@@ -211,6 +219,14 @@ func (n *Node) Propose(ctx context.Context, value []byte) error {
 // Committed returns a channel that emits decided entries.
 func (n *Node) Committed() <-chan Entry {
 	return n.committed
+}
+
+// IsLeader reports whether this node currently believes itself to be the
+// elected proposer. The result is stale-tolerant — leadership can change
+// between this call and the next protocol step, so callers should treat
+// true as "best-effort try here first" rather than an invariant.
+func (n *Node) IsLeader() bool {
+	return n.proposer.isLeader
 }
 
 // Stop gracefully shuts down the Node.

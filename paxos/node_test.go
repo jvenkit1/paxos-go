@@ -144,3 +144,29 @@ func TestNodeLeaderElection(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeIsLeader(t *testing.T) {
+	ids := []int{1, 2}
+	transports := NewChannelTransportGroup(ids...)
+
+	node1 := NewNode(1, []int{2}, transports[1])
+	node2 := NewNode(2, []int{1}, transports[2])
+
+	ctx := context.Background()
+	node1.Start(ctx)
+	node2.Start(ctx)
+	defer func() {
+		node1.Stop()
+		node2.Stop()
+	}()
+
+	// Wait past the 500ms election window.
+	time.Sleep(700 * time.Millisecond)
+
+	if node1.IsLeader() {
+		t.Errorf("node 1 (lower ID) should not be leader")
+	}
+	if !node2.IsLeader() {
+		t.Errorf("node 2 (higher ID) should be leader")
+	}
+}

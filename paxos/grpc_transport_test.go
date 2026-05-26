@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -51,14 +52,26 @@ func buildGRPCCluster(t *testing.T, ids []int) (map[int]*GRPCTransport, func()) 
 
 	startCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	for id, tr := range transports {
-		if err := tr.Start(startCtx); err != nil {
-			t.Fatalf("transport %d Start: %v", id, err)
-		}
-	}
 
-	// Give gRPC connections a moment to settle before consensus begins.
-	time.Sleep(150 * time.Millisecond)
+	// GRPCTransport.Start now blocks until peer connections reach READY, so each
+	// transport must start in its own goroutine — otherwise the first one would
+	// deadlock waiting for peers whose Start hasn't been called yet.
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(transports))
+	for id, tr := range transports {
+		wg.Add(1)
+		go func(id int, tr *GRPCTransport) {
+			defer wg.Done()
+			if err := tr.Start(startCtx); err != nil {
+				errCh <- fmt.Errorf("transport %d Start: %w", id, err)
+			}
+		}(id, tr)
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		t.Fatal(err)
+	}
 
 	cleanup := func() {
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -95,6 +108,31 @@ func TestGRPCTransportRoundTrip(t *testing.T) {
 	if got.From != want.From || got.To != want.To || got.Type != want.Type ||
 		got.Number != want.Number || got.Slot != want.Slot || string(got.Value) != string(want.Value) {
 		t.Errorf("round-trip mismatch:\n  got  = %+v\n  want = %+v", got, want)
+	}
+}
+
+// TestGRPCTransportStartUnreachablePeer verifies that Start blocks waiting for
+// every peer to reach READY and returns the ctx error if any peer is
+// unreachable before the deadline.
+func TestGRPCTransportStartUnreachablePeer(t *testing.T) {
+	// freeAddr returns an unbound 127.0.0.1 port. Nothing is listening on it,
+	// so the gRPC client connection will never reach READY.
+	unreachable := freeAddr(t)
+
+	tr, err := NewGRPCTransport(1, freeAddr(t), map[int]string{2: unreachable})
+	if err != nil {
+		t.Fatalf("NewGRPCTransport: %v", err)
+	}
+	defer func() {
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), time.Second)
+		defer stopCancel()
+		_ = tr.Stop(stopCtx)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := tr.Start(ctx); err == nil {
+		t.Fatal("Start with unreachable peer should fail")
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/jvenkit/grpc/lib/client"
 	"github.com/jvenkit/grpc/lib/server"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -67,9 +68,14 @@ func NewGRPCTransport(selfID int, listenAddr string, peerAddrs map[int]string) (
 	return t, nil
 }
 
-// Start binds the listener and dials all configured peers. Dials are
-// non-blocking — the gRPC client connects lazily, so peers can be started in
-// any order.
+// Start binds the listener, dials all configured peers, and waits for each
+// peer connection to reach connectivity.Ready before returning. The caller's
+// ctx caps total startup time; if any peer cannot be reached before ctx
+// expires, Start returns an error.
+//
+// This means all cluster members must come up within the ctx window. The
+// previous lazy-dial behavior allowed Node.Start to race ahead and run leader
+// election against unreachable peers, causing split-brain.
 func (t *GRPCTransport) Start(ctx context.Context) error {
 	if err := t.runtime.Start(ctx); err != nil {
 		return fmt.Errorf("grpcTransport: start runtime: %w", err)
@@ -84,6 +90,18 @@ func (t *GRPCTransport) Start(ctx context.Context) error {
 		}
 		t.conns[id] = conn
 		t.clients[id] = paxosv1.NewPaxosServiceClient(conn)
+	}
+	for id, conn := range t.conns {
+		conn.Connect()
+		for {
+			state := conn.GetState()
+			if state == connectivity.Ready {
+				break
+			}
+			if !conn.WaitForStateChange(ctx, state) {
+				return fmt.Errorf("grpcTransport: peer %d (%s) not ready: %w", id, t.peerAddrs[id], ctx.Err())
+			}
+		}
 	}
 	return nil
 }
